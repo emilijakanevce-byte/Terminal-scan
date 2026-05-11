@@ -243,8 +243,7 @@ function resetSettings(){
   loadSettings(); setStatus('Settings reset');
 }
 function parseWatchlist(){
-  const raw = els.watchlist.value.split(/[,
-\s]+/).map(x => x.trim().toUpperCase()).filter(Boolean);
+  const raw = els.watchlist.value.split(/[\s,]+/).map(x => x.trim().toUpperCase()).filter(Boolean);
   return [...new Set(['SPY','QQQ',...raw])];
 }
 function parseOverrides(){
@@ -261,18 +260,29 @@ function pct(n){ return Number.isFinite(n) ? `${n.toFixed(2)}%` : '—'; }
 function badge(text, cls){ return `<span class="badge ${cls}">${text}</span>`; }
 
 async function fetchYahoo(ticker){
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?range=5d&interval=5m&includePrePost=true`;
-  const res = await fetch(url, {cache:'no-store'});
-  if(!res.ok) throw new Error(`HTTP ${res.status}`);
-  const json = await res.json();
-  const r = json.chart && json.chart.result && json.chart.result[0];
-  if(!r || !r.timestamp || !r.indicators || !r.indicators.quote) throw new Error('Bad data');
-  const q = r.indicators.quote[0];
-  const candles = r.timestamp.map((t,i)=>({
-    t: t*1000, open:q.open[i], high:q.high[i], low:q.low[i], close:q.close[i], volume:q.volume[i] || 0
-  })).filter(c => [c.open,c.high,c.low,c.close].every(Number.isFinite));
-  if(candles.length < 40) throw new Error('Not enough candles');
-  return candles;
+  const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?range=5d&interval=5m&includePrePost=true`;
+  const urls = [
+    {name:'Yahoo direct', url:yahooUrl},
+    {name:'AllOrigins Yahoo proxy', url:`https://api.allorigins.win/raw?url=${encodeURIComponent(yahooUrl)}`}
+  ];
+  let lastError = '';
+  for(const src of urls){
+    try{
+      const res = await fetch(src.url, {cache:'no-store'});
+      if(!res.ok) throw new Error(`${src.name} HTTP ${res.status}`);
+      const txt = await res.text();
+      const json = JSON.parse(txt);
+      const r = json.chart && json.chart.result && json.chart.result[0];
+      if(!r || !r.timestamp || !r.indicators || !r.indicators.quote) throw new Error(`${src.name} bad data`);
+      const q = r.indicators.quote[0];
+      const candles = r.timestamp.map((t,i)=>({
+        t: t*1000, open:q.open[i], high:q.high[i], low:q.low[i], close:q.close[i], volume:q.volume[i] || 0
+      })).filter(c => [c.open,c.high,c.low,c.close].every(Number.isFinite));
+      if(candles.length < 40) throw new Error(`${src.name} not enough candles`);
+      return candles;
+    } catch(e){ lastError = e.message || String(e); }
+  }
+  throw new Error(lastError || 'Data unavailable');
 }
 function sma(vals, p){ if(vals.length < p) return null; return vals.slice(-p).reduce((a,b)=>a+b,0)/p; }
 function ema(vals, p){
