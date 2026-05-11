@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>A+ Trade Decision Scanner</title>
+  <style>
+    :root {
+      --bg: #0b0f14;
+      --panel: #111821;
+      --panel2: #16202b;
+      --text: #e8edf3;
+      --muted: #98a6b3;
+      --line: #273443;
+      --green: #26c281;
+      --red: #ff5c5c;
+      --yellow: #f5c542;
+      --blue: #4aa3ff;
+      --gray: #7c8996;
+      --purple: #b67aff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      background: radial-gradient(circle at top, #142033 0, var(--bg) 40%);
+      color: var(--text);
+      padding: 14px;
+    }
+    .app { max-width: 1160px; margin: 0 auto; }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+    h1 { margin: 0; font-size: 22px; letter-spacing: -0.02em; }
+    .subtitle { margin-top: 5px; color: var(--muted); font-size: 13px; line-height: 1.4; }
+    .controls { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+    button, select, input, textarea {
+      background: var(--panel2);
+      color: var(--text);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 14px;
+    }
+    button { cursor: pointer; font-weight: 700; }
+    button.primary { background: #1d65b7; border-color: #2e83df; }
+    button.danger { background: #412025; border-color: #71313b; }
+    button:disabled { opacity: 0.55; cursor: not-allowed; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .panel {
+      background: rgba(17,24,33,0.94);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.18);
+    }
+    .panel h2 { margin: 0 0 10px; font-size: 16px; }
+    .market-box { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+    .metric {
+      background: #0d131b;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px;
+      min-height: 72px;
+    }
+    .metric .label { color: var(--muted); font-size: 12px; }
+    .metric .value { font-size: 18px; font-weight: 800; margin-top: 6px; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 5px 9px;
+      font-size: 12px;
+      font-weight: 800;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+    .b-green { color: #b9ffe1; background: rgba(38,194,129,.14); border-color: rgba(38,194,129,.35); }
+    .b-red { color: #ffd0d0; background: rgba(255,92,92,.13); border-color: rgba(255,92,92,.35); }
+    .b-yellow { color: #ffe9a3; background: rgba(245,197,66,.13); border-color: rgba(245,197,66,.35); }
+    .b-blue { color: #d7ecff; background: rgba(74,163,255,.13); border-color: rgba(74,163,255,.35); }
+    .b-gray { color: #d4dbe2; background: rgba(124,137,150,.13); border-color: rgba(124,137,150,.35); }
+    .b-purple { color: #efdfff; background: rgba(182,122,255,.13); border-color: rgba(182,122,255,.35); }
+    .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .card {
+      background: #0d131b;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px;
+    }
+    .card-head { display: flex; justify-content: space-between; gap: 8px; align-items: center; margin-bottom: 8px; }
+    .ticker { font-size: 20px; font-weight: 900; }
+    .small { font-size: 12px; color: var(--muted); line-height: 1.4; }
+    .price { font-size: 18px; font-weight: 800; margin: 6px 0; }
+    .reason { font-size: 12px; color: #c6d0db; line-height: 1.4; margin-top: 8px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 10px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { color: var(--muted); font-weight: 700; font-size: 12px; }
+    tr:hover { background: rgba(255,255,255,0.03); }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+    .settings { display: grid; grid-template-columns: 1.2fr 1fr; gap: 12px; }
+    textarea { width: 100%; min-height: 86px; resize: vertical; }
+    .detail-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .kv { background: #0d131b; border: 1px solid var(--line); border-radius: 10px; padding: 8px; }
+    .kv span { display: block; color: var(--muted); font-size: 11px; margin-bottom: 4px; }
+    .kv strong { font-size: 13px; }
+    .footer-note { color: var(--muted); font-size: 12px; line-height: 1.45; margin-top: 12px; }
+    .hidden { display: none; }
+    @media (max-width: 820px) {
+      body { padding: 10px; }
+      .header { flex-direction: column; }
+      .grid, .settings { grid-template-columns: 1fr; }
+      .market-box { grid-template-columns: 1fr 1fr; }
+      .cards { grid-template-columns: 1fr; }
+      .detail-list { grid-template-columns: 1fr; }
+      th:nth-child(5), td:nth-child(5), th:nth-child(6), td:nth-child(6) { display: none; }
+      h1 { font-size: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <div>
+        <h1>A+ Trade Decision Scanner</h1>
+        <div class="subtitle">Strict daily/weekly stock setup scanner for CALL / PUT decisions. It confirms structure; it does not predict.</div>
+      </div>
+      <div class="small mono" id="status">Not scanned yet</div>
+    </div>
+
+    <div class="controls">
+      <button class="primary" id="scanBtn">Scan Now</button>
+      <select id="mode">
+        <option value="intraday">Intraday A+ Setup</option>
+        <option value="breakRetest">Break & Retest</option>
+        <option value="swing">Swing Watchlist</option>
+      </select>
+      <select id="strictness">
+        <option value="strict" selected>Strict</option>
+        <option value="balanced">Balanced</option>
+      </select>
+      <button id="saveBtn">Save Settings</button>
+      <button class="danger" id="resetBtn">Reset</button>
+    </div>
+
+    <div class="panel" style="margin-bottom:12px;">
+      <h2>Market Status</h2>
+      <div class="market-box">
+        <div class="metric"><div class="label">Market Regime</div><div class="value" id="regime">—</div></div>
+        <div class="metric"><div class="label">SPY</div><div class="value" id="spyState">—</div></div>
+        <div class="metric"><div class="label">QQQ</div><div class="value" id="qqqState">—</div></div>
+        <div class="metric"><div class="label">Trade Bias</div><div class="value" id="bias">—</div></div>
+      </div>
+      <div class="footer-note">Hard filter: if SPY/QQQ are strongly against the ticker direction, signal is downgraded or blocked.</div>
+    </div>
+
+    <div class="grid">
+      <div class="panel">
+        <h2>Best Setups</h2>
+        <div class="cards" id="bestCards"></div>
+      </div>
+      <div class="panel">
+        <h2>Manual Override Levels</h2>
+        <div class="small">Format: <span class="mono">NVDA=179</span>, one per line. Override acts as trader-selected key level.</div>
+        <textarea id="overrides"></textarea>
+        <div class="footer-note">Use override only for levels you would draw yourself: PMH/PDH/key support/resistance. Bad manual levels create bad signals.</div>
+      </div>
+    </div>
+
+    <div class="settings" style="margin-top:12px;">
+      <div class="panel">
+        <h2>Watchlist</h2>
+        <textarea id="watchlist"></textarea>
+        <div class="footer-note">SPY and QQQ are always used for market regime even if removed from watchlist.</div>
+      </div>
+      <div class="panel">
+        <h2>Signal Rules</h2>
+        <div class="detail-list">
+          <div class="kv"><span>A+ Setup</span><strong>Score ≥ 90</strong></div>
+          <div class="kv"><span>Valid Setup</span><strong>Score ≥ 85</strong></div>
+          <div class="kv"><span>Minimum R:R</span><strong>1:2</strong></div>
+          <div class="kv"><span>Retest Zone</span><strong>±0.25 ATR</strong></div>
+          <div class="kv"><span>Main Confirmation</span><strong>VWAP + EMA 9/20</strong></div>
+          <div class="kv"><span>Option Rule</span><strong>Manual liquidity check</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:12px;">
+      <h2>Watchlist Results</h2>
+      <div style="overflow:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Ticker</th><th>Direction</th><th>Score</th><th>Signal</th><th>Setup</th><th>Entry / Stop / Target</th><th>Reason</th>
+            </tr>
+          </thead>
+          <tbody id="results"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:12px;">
+      <h2>Ticker Details</h2>
+      <div id="details" class="small">Tap a ticker row after scanning.</div>
+    </div>
+
+    <div class="footer-note">
+      Data source: Yahoo Finance public chart endpoint, no API key. This can be delayed, blocked by CORS, or unavailable. If data is unavailable, the scanner will show that clearly and will not invent fake prices. Educational use only; verify live price and option chain in IBKR before entry.
+    </div>
+  </div>
+
+<script>
+const DEFAULT_WATCHLIST = ['SPY','QQQ','NVDA','TSLA','AMD','AAPL','MSFT','AMZN','META','GOOGL','PLTR','SOFI','COIN','MSTR','BAC','IBKR','IREN'];
+const DEFAULT_OVERRIDES = 'NVDA=179';
+const els = {
+  status: document.getElementById('status'), scanBtn: document.getElementById('scanBtn'), saveBtn: document.getElementById('saveBtn'), resetBtn: document.getElementById('resetBtn'),
+  watchlist: document.getElementById('watchlist'), overrides: document.getElementById('overrides'), mode: document.getElementById('mode'), strictness: document.getElementById('strictness'),
+  regime: document.getElementById('regime'), spyState: document.getElementById('spyState'), qqqState: document.getElementById('qqqState'), bias: document.getElementById('bias'),
+  bestCards: document.getElementById('bestCards'), results: document.getElementById('results'), details: document.getElementById('details')
+};
+let latestResults = [];
+
+function loadSettings(){
+  els.watchlist.value = localStorage.getItem('aplus_watchlist') || DEFAULT_WATCHLIST.join(', ');
+  els.overrides.value = localStorage.getItem('aplus_overrides') || DEFAULT_OVERRIDES;
+  els.mode.value = localStorage.getItem('aplus_mode') || 'intraday';
+  els.strictness.value = localStorage.getItem('aplus_strictness') || 'strict';
+}
+function saveSettings(){
+  localStorage.setItem('aplus_watchlist', els.watchlist.value);
+  localStorage.setItem('aplus_overrides', els.overrides.value);
+  localStorage.setItem('aplus_mode', els.mode.value);
+  localStorage.setItem('aplus_strictness', els.strictness.value);
+  setStatus('Settings saved');
+}
+function resetSettings(){
+  localStorage.removeItem('aplus_watchlist'); localStorage.removeItem('aplus_overrides'); localStorage.removeItem('aplus_mode'); localStorage.removeItem('aplus_strictness');
+  loadSettings(); setStatus('Settings reset');
+}
+function parseWatchlist(){
+  const raw = els.watchlist.value.split(/[,
+\s]+/).map(x => x.trim().toUpperCase()).filter(Boolean);
+  return [...new Set(['SPY','QQQ',...raw])];
+}
+function parseOverrides(){
+  const map = {};
+  els.overrides.value.split('\n').forEach(line => {
+    const m = line.trim().match(/^([A-Z.]+)\s*=\s*([0-9.]+)$/i);
+    if(m) map[m[1].toUpperCase()] = Number(m[2]);
+  });
+  return map;
+}
+function setStatus(txt){ els.status.textContent = `${txt} | ${new Date().toLocaleString()}`; }
+function fmt(n){ return Number.isFinite(n) ? n.toFixed(2) : '—'; }
+function pct(n){ return Number.isFinite(n) ? `${n.toFixed(2)}%` : '—'; }
+function badge(text, cls){ return `<span class="badge ${cls}">${text}</span>`; }
+
+async function fetchYahoo(ticker){
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?range=5d&interval=5m&includePrePost=true`;
+  const res = await fetch(url, {cache:'no-store'});
+  if(!res.ok) throw new Error(`HTTP ${res.status}`);
+  const json = await res.json();
+  const r = json.chart && json.chart.result && json.chart.result[0];
+  if(!r || !r.timestamp || !r.indicators || !r.indicators.quote) throw new Error('Bad data');
+  const q = r.indicators.quote[0];
+  const candles = r.timestamp.map((t,i)=>({
+    t: t*1000, open:q.open[i], high:q.high[i], low:q.low[i], close:q.close[i], volume:q.volume[i] || 0
+  })).filter(c => [c.open,c.high,c.low,c.close].every(Number.isFinite));
+  if(candles.length < 40) throw new Error('Not enough candles');
+  return candles;
+}
+function sma(vals, p){ if(vals.length < p) return null; return vals.slice(-p).reduce((a,b)=>a+b,0)/p; }
+function ema(vals, p){
+  if(vals.length < p) return null; const k = 2/(p+1); let e = vals.slice(0,p).reduce((a,b)=>a+b,0)/p;
+  for(let i=p;i<vals.length;i++) e = vals[i]*k + e*(1-k); return e;
+}
+function atr(candles, p=14){
+  if(candles.length < p+1) return null; const trs=[];
+  for(let i=1;i<candles.length;i++){
+    const c=candles[i], prev=candles[i-1]; trs.push(Math.max(c.high-c.low, Math.abs(c.high-prev.close), Math.abs(c.low-prev.close)));
+  }
+  return sma(trs, p);
+}
+function rsi(closes, p=14){
+  if(closes.length < p+1) return null; let gains=0, losses=0;
+  for(let i=closes.length-p;i<closes.length;i++){ const d=closes[i]-closes[i-1]; if(d>=0) gains += d; else losses -= d; }
+  if(losses === 0) return 100; const rs = gains/losses; return 100 - (100/(1+rs));
+}
+function vwap(candles){
+  let pv=0, vol=0; candles.slice(-78).forEach(c => { const tp=(c.high+c.low+c.close)/3; pv += tp*c.volume; vol += c.volume; });
+  return vol ? pv/vol : null;
+}
+function recentSwing(candles){
+  const last = candles.slice(-40, -2); return { high: Math.max(...last.map(c=>c.high)), low: Math.min(...last.map(c=>c.low)) };
+}
+function previousDayLevels(candles){
+  const days = {};
+  candles.forEach(c => { const d = new Date(c.t).toISOString().slice(0,10); (days[d] ||= []).push(c); });
+  const keys = Object.keys(days).sort();
+  const prev = days[keys[keys.length-2]] || candles.slice(-78,-1);
+  return { pdh: Math.max(...prev.map(c=>c.high)), pdl: Math.min(...prev.map(c=>c.low)) };
+}
+function openingRange(candles){
+  const today = new Date(candles[candles.length-1].t).toISOString().slice(0,10);
+  const day = candles.filter(c => new Date(c.t).toISOString().slice(0,10) === today);
+  const first6 = day.slice(0,6).length ? day.slice(0,6) : candles.slice(-78,-72);
+  return { orh: Math.max(...first6.map(c=>c.high)), orl: Math.min(...first6.map(c=>c.low)) };
+}
+function analyzeTicker(ticker, candles, market, overrides){
+  const closes = candles.map(c=>c.close); const vols = candles.map(c=>c.volume);
+  const last = candles[candles.length-1]; const prev = candles[candles.length-2];
+  const e9 = ema(closes,9), e20 = ema(closes,20), vw = vwap(candles), a = atr(candles), rs = rsi(closes);
+  const avgVol = sma(vols.slice(-30,-1),20) || 1; const rvol = last.volume / avgVol;
+  const swing = recentSwing(candles), pd = previousDayLevels(candles), or = openingRange(candles);
+  const override = overrides[ticker];
+  const levelsUp = [pd.pdh, or.orh, swing.high, override].filter(Number.isFinite).sort((x,y)=>Math.abs(last.close-x)-Math.abs(last.close-y));
+  const levelsDown = [pd.pdl, or.orl, swing.low, override].filter(Number.isFinite).sort((x,y)=>Math.abs(last.close-x)-Math.abs(last.close-y));
+  const bullishCore = last.close > vw && e9 > e20 && last.close > e9;
+  const bearishCore = last.close < vw && e9 < e20 && last.close < e9;
+  let direction = bullishCore ? 'CALL' : bearishCore ? 'PUT' : (last.close > prev.close ? 'CALL' : 'PUT');
+  const level = direction === 'CALL' ? levelsUp[0] : levelsDown[0];
+  const tol = a ? a * 0.25 : last.close * 0.002;
+  const brokeCall = direction==='CALL' && prev.close <= level && last.close > level;
+  const brokePut = direction==='PUT' && prev.close >= level && last.close < level;
+  const nearLevel = Math.abs(last.close - level) <= Math.max(tol, last.close*0.0015);
+  const rejectionCall = direction==='CALL' && last.low <= level + tol && last.close > level && last.close > last.open;
+  const rejectionPut = direction==='PUT' && last.high >= level - tol && last.close < level && last.close < last.open;
+  const breakoutConfirmed = brokeCall || brokePut || (direction==='CALL' ? last.close > level : last.close < level);
+  const retestQuality = nearLevel || rejectionCall || rejectionPut;
+  const rejection = rejectionCall || rejectionPut;
+  const marketOk = direction==='CALL' ? market.bias !== 'PUT' : market.bias !== 'CALL';
+  const volumeOk = rvol >= 1.2;
+  const rr = estimateRR(direction, last.close, level, a, pd, or, swing);
+  let score = 0;
+  const levelQuality = override ? 15 : (Math.abs(level-pd.pdh)<0.01 || Math.abs(level-pd.pdl)<0.01 ? 14 : 11);
+  score += levelQuality; // 15
+  score += breakoutConfirmed ? 10 : 3;
+  score += retestQuality ? 15 : 4;
+  score += rejection ? 15 : 4;
+  score += ((direction==='CALL' && bullishCore) || (direction==='PUT' && bearishCore)) ? 15 : 5;
+  score += marketOk ? 10 : 0;
+  score += rvol >= 1.5 ? 10 : rvol >= 1.0 ? 6 : 1;
+  score += rr >= 2 ? 10 : rr >= 1.5 ? 5 : 0;
+  if(els.strictness.value === 'strict'){
+    if(!marketOk) score = Math.min(score,74);
+    if(!rejection && !retestQuality) score = Math.min(score,74);
+    if(rr < 2) score = Math.min(score,84);
+    if(rvol < 1.0) score = Math.min(score,79);
+  }
+  score = Math.max(0, Math.min(100, Math.round(score)));
+  let signal = 'NO TRADE';
+  if(score >= 90 && marketOk && rr >= 2 && (rejection || retestQuality)) signal='A+ SETUP';
+  else if(score >= 85 && marketOk && rr >= 2) signal='VALID SETUP';
+  else if(score >= 75) signal='WATCH ONLY';
+  else if(score >= 60) signal='WEAK';
+  const entry = direction==='CALL' ? last.high + (a||0)*0.05 : last.low - (a||0)*0.05;
+  const stop = direction==='CALL' ? Math.min(last.low, level - tol) : Math.max(last.high, level + tol);
+  const target = direction==='CALL' ? entry + Math.abs(entry-stop)*2 : entry - Math.abs(entry-stop)*2;
+  const setup = rejection ? 'Break/Retest Rejection' : retestQuality ? 'Retest Watch' : ((direction==='CALL'&&bullishCore)||(direction==='PUT'&&bearishCore)) ? 'VWAP/EMA Trend' : 'No clean setup';
+  const reason = [
+    `Level ${fmt(level)}${override?' override':''}`,
+    breakoutConfirmed?'breakout ok':'breakout weak',
+    retestQuality?'retest zone ok':'no retest',
+    rejection?'rejection ok':'no rejection yet',
+    `RVOL ${rvol.toFixed(1)}`,
+    marketOk?'market ok':'market against',
+    `R:R ${rr.toFixed(1)}`
+  ].join(' | ');
+  return { ticker, price:last.close, direction, score, signal, setup, entry, stop, target, rr, reason, level, vw, e9, e20, rsi:rs, rvol, marketOk, breakoutConfirmed, retestQuality, rejection };
+}
+function estimateRR(direction, price, level, a, pd, or, swing){
+  const risk = Math.max(Math.abs(price-level), (a||price*0.005)*0.5);
+  let reward;
+  if(direction==='CALL'){
+    const targets = [pd.pdh, or.orh, swing.high].filter(x=>Number.isFinite(x)&&x>price).sort((x,y)=>x-y);
+    reward = targets.length ? targets[0]-price : risk*2.2;
+  } else {
+    const targets = [pd.pdl, or.orl, swing.low].filter(x=>Number.isFinite(x)&&x<price).sort((x,y)=>y-x);
+    reward = targets.length ? price-targets[0] : risk*2.2;
+  }
+  return reward/risk;
+}
+function marketRegime(spy, qqq){
+  const calc = r => ({bull: r.price > r.vw && r.e9 > r.e20, bear: r.price < r.vw && r.e9 < r.e20});
+  const s=calc(spy), q=calc(qqq);
+  let regime='Neutral', bias='NEUTRAL';
+  if(s.bull && q.bull){ regime='Trending Bullish'; bias='CALL'; }
+  else if(s.bear && q.bear){ regime='Trending Bearish'; bias='PUT'; }
+  else if((s.bull && q.bear) || (s.bear && q.bull)){ regime='Choppy'; bias='NEUTRAL'; }
+  return { regime, bias };
+}
+async function scan(){
+  els.scanBtn.disabled = true; setStatus('Scanning...'); els.results.innerHTML=''; els.bestCards.innerHTML=''; els.details.textContent='Scanning data...';
+  const tickers = parseWatchlist(); const overrides = parseOverrides(); const data = {}; const errors = [];
+  for(const t of tickers){
+    try { data[t] = await fetchYahoo(t); }
+    catch(e){ errors.push(`${t}: ${e.message}`); }
+  }
+  if(!data.SPY || !data.QQQ){
+    setStatus('Data unavailable for SPY/QQQ. Cannot classify market.');
+    els.details.textContent = 'SPY/QQQ data is required. The free public endpoint may be blocked or delayed. Try again later or move to API-key version.';
+    els.scanBtn.disabled = false; return;
+  }
+  const dummyMarket = {bias:'NEUTRAL'};
+  const spyBase = analyzeTicker('SPY', data.SPY, dummyMarket, overrides);
+  const qqqBase = analyzeTicker('QQQ', data.QQQ, dummyMarket, overrides);
+  const market = marketRegime(spyBase, qqqBase);
+  els.regime.textContent = market.regime; els.spyState.innerHTML = spyBase.price > spyBase.vw ? 'Above VWAP' : 'Below VWAP'; els.qqqState.innerHTML = qqqBase.price > qqqBase.vw ? 'Above VWAP' : 'Below VWAP'; els.bias.textContent = market.bias;
+  latestResults = tickers.filter(t=>data[t]).map(t => analyzeTicker(t, data[t], market, overrides)).sort((a,b)=>b.score-a.score);
+  renderResults(latestResults);
+  renderBest(latestResults.filter(r=>!['SPY','QQQ'].includes(r.ticker)).slice(0,5));
+  setStatus(errors.length ? `Scan complete with ${errors.length} unavailable ticker(s)` : 'Scan complete');
+  els.details.innerHTML = errors.length ? `<div class="small">Unavailable: ${errors.slice(0,8).join('; ')}</div>` : 'Tap a ticker row for details.';
+  els.scanBtn.disabled = false;
+}
+function signalBadge(signal){
+  if(signal==='A+ SETUP') return badge(signal,'b-green'); if(signal==='VALID SETUP') return badge(signal,'b-blue'); if(signal==='WATCH ONLY') return badge(signal,'b-yellow'); if(signal==='WEAK') return badge(signal,'b-purple'); return badge(signal,'b-gray');
+}
+function dirBadge(dir){ return dir==='CALL' ? badge('CALL','b-green') : badge('PUT','b-red'); }
+function renderBest(rows){
+  els.bestCards.innerHTML = rows.length ? rows.map(r=>`<div class="card" onclick="showDetails('${r.ticker}')"><div class="card-head"><div class="ticker">${r.ticker}</div>${signalBadge(r.signal)}</div><div>${dirBadge(r.direction)} <span class="badge b-gray">Score ${r.score}</span></div><div class="price">$${fmt(r.price)}</div><div class="small">Entry ${fmt(r.entry)} | Stop ${fmt(r.stop)} | Target ${fmt(r.target)}</div><div class="reason">${r.reason}</div></div>`).join('') : '<div class="small">No setups yet.</div>';
+}
+function renderResults(rows){
+  els.results.innerHTML = rows.map(r=>`<tr onclick="showDetails('${r.ticker}')"><td><strong>${r.ticker}</strong><br><span class="small">$${fmt(r.price)}</span></td><td>${dirBadge(r.direction)}</td><td><strong>${r.score}</strong></td><td>${signalBadge(r.signal)}</td><td>${r.setup}</td><td class="mono">E ${fmt(r.entry)}<br>S ${fmt(r.stop)}<br>T ${fmt(r.target)}</td><td class="small">${r.reason}</td></tr>`).join('');
+}
+function showDetails(ticker){
+  const r = latestResults.find(x=>x.ticker===ticker); if(!r) return;
+  els.details.innerHTML = `<div class="detail-list">
+    <div class="kv"><span>Ticker</span><strong>${r.ticker} / ${r.direction}</strong></div>
+    <div class="kv"><span>Final Decision</span><strong>${r.signal}</strong></div>
+    <div class="kv"><span>Score</span><strong>${r.score}</strong></div>
+    <div class="kv"><span>Setup</span><strong>${r.setup}</strong></div>
+    <div class="kv"><span>Level Used</span><strong>${fmt(r.level)}</strong></div>
+    <div class="kv"><span>Breakout</span><strong>${r.breakoutConfirmed?'Confirmed':'Weak / not confirmed'}</strong></div>
+    <div class="kv"><span>Retest</span><strong>${r.retestQuality?'Confirmed / near zone':'Not confirmed'}</strong></div>
+    <div class="kv"><span>Rejection</span><strong>${r.rejection?'Confirmed':'Not confirmed'}</strong></div>
+    <div class="kv"><span>VWAP</span><strong>${fmt(r.vw)}</strong></div>
+    <div class="kv"><span>EMA 9 / EMA 20</span><strong>${fmt(r.e9)} / ${fmt(r.e20)}</strong></div>
+    <div class="kv"><span>RSI</span><strong>${fmt(r.rsi)}</strong></div>
+    <div class="kv"><span>RVOL</span><strong>${r.rvol.toFixed(2)}</strong></div>
+    <div class="kv"><span>R:R</span><strong>${r.rr.toFixed(2)}</strong></div>
+    <div class="kv"><span>Market Confirmation</span><strong>${r.marketOk?'OK':'Against direction'}</strong></div>
+  </div><div class="footer-note"><strong>Before option entry:</strong> check bid/ask spread ≤ 5–10%, option volume, open interest, IV/news/earnings risk, and confirm live price in IBKR. Stock setup valid does not automatically mean option trade valid.</div>`;
+}
+els.scanBtn.addEventListener('click', scan); els.saveBtn.addEventListener('click', saveSettings); els.resetBtn.addEventListener('click', resetSettings); loadSettings();
+</script>
+</body>
+</html>
